@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Chinonso Okorie</title>
+<meta name="description" content="Chinonso Okorie, Ph.D. candidate in Industrial Engineering at FAMU-FSU College of Engineering. Operations research and machine learning for transportation: electric-truck routing, charging infrastructure planning, and paratransit districting.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+html,body{margin:0}img{max-width:100%}
+
+/* Layout: a transit line map. Sections are "stops" on one vertical route; the hero draws a live routing + districting network. */
+:root{
+  --paper:#FFFFFF;      /* white page */
+  --panel:#F7F9FA;
+  --ink:#132232;        /* deep transit navy */
+  --ink-2:#4A5B6C;
+  --rule:#D6DEE5;
+  --route:#0E7C59;      /* electric-truck green */
+  --route-soft:#DDF0E8;
+  --stop:#D9541E;       /* signal orange, used sparingly */
+  --district:#2F5FA8;   /* district boundary blue */
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --max:1120px;
+}
+:root{color-scheme:light}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--paper)}
+a{color:inherit;text-decoration-color:color-mix(in srgb,var(--route) 60%,transparent);text-underline-offset:3px}
+a:hover{color:var(--route)}
+:focus-visible{outline:2px solid var(--stop);outline-offset:3px;border-radius:3px}
+.wrap{max-width:var(--max);margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.08}
+p{margin:0}
+.mono{font-family:var(--mono);font-size:.8rem;letter-spacing:.02em}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--route)}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.bar .wrap{display:flex;align-items:center;gap:20px;padding-block:12px}
+.mark{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:800;font-stretch:115%;letter-spacing:.02em}
+.mark i{width:14px;height:14px;border-radius:50%;border:3px solid var(--route);background:var(--paper)}
+.bar nav{margin-left:auto;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.bar nav::-webkit-scrollbar{display:none}
+.bar nav a{font-size:.86rem;text-decoration:none;color:var(--ink-2);padding:6px 10px;border-radius:999px;white-space:nowrap}
+.bar nav a:hover{color:var(--ink);background:var(--route-soft)}
+
+/* ---------- hero ---------- */
+.hero{padding-block:56px 40px}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:48px;align-items:center}
+.hero h1{font-size:clamp(2.7rem,7vw,5.2rem);font-weight:800;font-stretch:112%;letter-spacing:-.01em;margin-top:14px}
+.hero h1 span{display:block;font-weight:400;font-stretch:80%;color:var(--ink-2);font-size:.42em;letter-spacing:.01em;margin-top:14px}
+.lede{margin-top:22px;max-width:60ch;font-size:1.08rem;color:var(--ink-2)}
+.lede b{color:var(--ink);font-weight:600}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.92rem;text-decoration:none;padding:11px 18px;border-radius:999px;border:1.5px solid var(--ink);color:var(--ink);background:transparent;cursor:pointer;font-family:var(--body)}
+.btn.primary{background:var(--route);border-color:var(--route);color:var(--paper)}
+.btn:hover{color:var(--paper);background:var(--ink)}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+.facts{display:flex;flex-wrap:wrap;gap:28px;margin-top:36px;padding-top:22px;border-top:1px solid var(--rule)}
+.fact b{display:block;font-family:var(--display);font-stretch:112%;font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.fact span{font-size:.82rem;color:var(--ink-2)}
+
+.photo{position:relative;margin:0;max-width:420px;justify-self:end;width:100%}
+.photo::before{content:"";position:absolute;inset:18px -18px -18px 18px;border:2px solid var(--route);border-radius:20px;z-index:0}
+.photo img{position:relative;z-index:1;display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:20px;background:var(--route-soft)}
+.photo figcaption{position:absolute;z-index:2;left:16px;bottom:16px;display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--rule);font-size:.86rem;font-weight:600}
+.photo figcaption .mono{font-size:.68rem;font-weight:400;color:var(--route);letter-spacing:.06em;text-transform:uppercase}
+.profiles{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin-top:44px;padding-block:14px;border-block:1px solid var(--rule)}
+.profiles .mono{color:var(--ink-2);text-transform:uppercase;letter-spacing:.12em;font-size:.7rem}
+.profiles a{font-weight:600;font-size:.92rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.profiles a::before{content:"";width:8px;height:8px;border-radius:50%;border:2px solid var(--route)}
+.map{position:relative;aspect-ratio:16/10;max-width:100%;border:1px solid var(--rule);border-radius:18px;background:var(--panel);overflow:hidden;margin:0}
+.map canvas{position:absolute;inset:0;width:100%;height:100%}
+.research-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:40px;align-items:center;margin-bottom:32px}
+.research-top .intro{margin:0}
+/* research areas */
+.areas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:16px;overflow:hidden}
+.area{background:var(--panel);padding:22px 20px;display:flex;flex-direction:column;gap:10px}
+.area .code{font-family:var(--mono);font-size:.7rem;color:var(--route);letter-spacing:.1em}
+.area h3{font-size:1.08rem;font-weight:700;font-stretch:104%;line-height:1.2}
+.area p{font-size:.88rem;color:var(--ink-2)}
+.area p.mine{margin-top:auto;padding-top:10px;border-top:1px dashed var(--rule);color:var(--ink);font-size:.84rem}
+.area p.mine b{color:var(--route);font-weight:600}
+/* news */
+.press{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.story{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.outlet{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-family:var(--mono);font-size:.72rem;color:var(--ink-2);letter-spacing:.04em}
+.outlet span:first-child{color:var(--route)}
+.story h3{font-size:1.25rem;font-weight:700;font-stretch:102%;line-height:1.25}
+.story h3 a{text-decoration:none}
+.story blockquote{margin:0;padding-left:14px;border-left:3px solid var(--stop);font-style:italic;color:var(--ink-2);font-size:.96rem}
+.nums{display:flex;flex-wrap:wrap;gap:8px}
+.nums span{font-size:.8rem;padding:4px 10px;border-radius:999px;background:var(--route-soft)}
+.nums b{font-variant-numeric:tabular-nums}
+.story .more{margin-top:auto;font-family:var(--mono);font-size:.78rem}
+.clip{margin:20px 0 0;background:#FFFFFF;border:1px solid var(--rule);border-radius:14px;overflow:hidden}
+.clip img{display:block;width:100%;height:auto}
+.clip figcaption{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 16px;padding:12px 18px;background:var(--panel);border-top:1px solid var(--rule);font-size:.86rem}
+.clip figcaption .mono{color:var(--ink-2)}
+.posts{list-style:none;margin:0;padding:0}
+.posts li{border-bottom:1px solid var(--rule)}
+.posts a{display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:16px;align-items:baseline;padding-block:14px;text-decoration:none}
+.posts .src{font-family:var(--mono);font-size:.74rem;color:var(--ink-2)}
+.posts .ttl{font-weight:600}
+.posts .go{font-family:var(--mono);font-size:.74rem;color:var(--route)}
+.posts a:hover .ttl{color:var(--route)}
+@media (max-width:640px){.press{grid-template-columns:minmax(0,1fr)}.posts a{grid-template-columns:minmax(0,1fr);gap:2px}}
+/* event photos */
+.events{display:grid;gap:40px}
+.event{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;align-items:start}
+.ev-meta{display:flex;flex-direction:column;gap:8px;padding-top:6px;border-top:3px solid var(--route)}
+.ev-when{font-family:var(--mono);font-size:.74rem;color:var(--stop);padding-top:8px}
+.ev-meta h3{font-size:1.3rem;font-weight:750;font-stretch:106%}
+.ev-meta p:last-child{font-size:.9rem;color:var(--ink-2)}
+.ev-photos{display:flex;gap:10px;min-width:0}
+.ev-photos figure{margin:0;flex:var(--ar) 1 0;min-width:0;border-radius:12px;overflow:hidden;background:var(--route-soft)}
+.ev-photos img{display:block;width:100%;height:auto;aspect-ratio:var(--ar);object-fit:cover;transition:transform .4s ease}
+.ev-photos figure:hover img{transform:scale(1.03)}
+@media (prefers-reduced-motion: reduce){.ev-photos img{transition:none}}
+@media (max-width:900px){.event{grid-template-columns:minmax(0,1fr);gap:14px}}
+@media (max-width:560px){.ev-photos{flex-wrap:wrap}.ev-photos figure{flex:1 1 calc(50% - 5px)}.ev-photos figure[style*="1.914"],.ev-photos figure[style*="1.333"]:only-child{flex-basis:100%}.ev-photos img{aspect-ratio:auto}}
+.lab{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin-top:20px;font-size:.9rem;color:var(--ink-2)}
+.legend{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:6px 14px;padding:9px 12px;border-radius:10px;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--rule);font-family:var(--mono);font-size:.68rem;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px}
+
+/* ---------- route sections ---------- */
+main{position:relative}
+.stop{position:relative;padding-block:64px}
+.stop + .stop{border-top:1px solid var(--rule)}
+.stop-head{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:baseline;margin-bottom:32px}
+.stop-head .dot{grid-row:span 2;width:18px;height:18px;border-radius:50%;border:4px solid var(--route);background:var(--paper);align-self:center}
+.stop-head h2{font-size:clamp(1.8rem,3.6vw,2.6rem);font-weight:750;font-stretch:108%}
+.intro{max-width:64ch;color:var(--ink-2);margin-top:-14px;margin-bottom:30px}
+
+/* about */
+.about{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:48px}
+.about p + p{margin-top:16px}
+.prose{max-width:64ch}
+.edu{display:grid;gap:0;border-left:3px solid var(--route);padding-left:22px}
+.edu li{list-style:none;position:relative;padding-bottom:22px}
+.edu li:last-child{padding-bottom:0}
+.edu li::before{content:"";position:absolute;left:-31px;top:6px;width:15px;height:15px;border-radius:50%;background:var(--paper);border:3px solid var(--route)}
+.edu ul{margin:0;padding:0}
+.edu h3{font-size:1.08rem;font-weight:700;font-stretch:100%}
+.edu .when{color:var(--stop)}
+.edu p{font-size:.92rem;color:var(--ink-2)}
+
+/* research themes */
+.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.theme{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:12px}
+.theme .line{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px;color:var(--ink-2)}
+.theme .line i{width:26px;height:5px;border-radius:3px}
+.theme h3{font-size:1.28rem;font-weight:700;font-stretch:104%}
+.theme p{font-size:.94rem;color:var(--ink-2)}
+.theme .result{margin-top:auto;padding-top:14px;border-top:1px dashed var(--rule);font-family:var(--mono);font-size:.76rem;color:var(--ink)}
+.theme .result b{color:var(--route);font-weight:500}
+.also{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:20px}
+.also .theme{padding:20px 24px}
+
+/* publications */
+.pubs{display:grid;gap:0}
+.pub-group + .pub-group{margin-top:36px}
+.pub-group > h3{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--ink-2);margin-bottom:8px}
+.pub{display:grid;grid-template-columns:72px minmax(0,1fr);gap:18px;padding-block:18px;border-top:1px solid var(--rule)}
+.pub .yr{font-family:var(--mono);font-size:.9rem;color:var(--stop);font-variant-numeric:tabular-nums;padding-top:2px}
+.pub .t{font-weight:600;font-size:1.02rem;line-height:1.45}
+.pub .a{font-size:.9rem;color:var(--ink-2);margin-top:4px}
+.pub .a u{text-decoration:none;color:var(--ink);font-weight:600}
+.pub .v{font-size:.9rem;font-style:italic;margin-top:2px}
+.pub .links{margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
+.pub .links a{font-family:var(--mono);font-size:.74rem}
+.tag{display:inline-block;font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2);vertical-align:2px;margin-left:6px}
+.tag.ok{border-color:var(--route);color:var(--route)}
+
+/* experience timeline */
+.timeline{display:grid;gap:22px}
+.job{display:grid;grid-template-columns:200px minmax(0,1fr);gap:28px;background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:26px}
+.job .meta .when{font-family:var(--mono);font-size:.8rem;color:var(--stop)}
+.job .meta p{font-size:.88rem;color:var(--ink-2);margin-top:6px}
+.job h3{font-size:1.25rem;font-weight:700;font-stretch:104%;margin-bottom:12px}
+.job ul{margin:0;padding-left:18px;display:grid;gap:8px}
+.job li{font-size:.95rem;color:var(--ink-2)}
+.job li::marker{color:var(--route)}
+.job li b{color:var(--ink);font-weight:600}
+
+/* projects */
+.projects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.proj{border:1px solid var(--rule);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:10px;background:var(--panel)}
+.proj .who{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);letter-spacing:.04em}
+.proj h3{font-size:1.1rem;font-weight:700;font-stretch:100%;line-height:1.3}
+.proj p{font-size:.92rem;color:var(--ink-2)}
+
+/* talks */
+.talks{display:grid;gap:0}
+.talk{display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;padding-block:16px;border-top:1px solid var(--rule)}
+.talk:last-child{border-bottom:1px solid var(--rule)}
+.talk .venue{font-family:var(--display);font-weight:700;font-stretch:110%;font-size:1.05rem;line-height:1.2}
+.talk .venue small{display:block;font-family:var(--mono);font-weight:400;font-size:.72rem;color:var(--ink-2);margin-top:4px;font-stretch:100%}
+.talk p{font-size:.95rem}
+.talk p span{color:var(--ink-2);font-size:.88rem;display:block;margin-top:2px}
+
+/* awards */
+.awards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.award{border-top:3px solid var(--route);background:var(--panel);border-radius:0 0 12px 12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;border-left:1px solid var(--rule);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.award .amt{font-family:var(--display);font-weight:800;font-stretch:112%;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.award h3{font-family:var(--body);font-size:.98rem;font-weight:600;line-height:1.35}
+.award p{font-size:.84rem;color:var(--ink-2)}
+
+/* service + skills */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px}
+.roles{display:grid;gap:18px}
+.role h3{font-family:var(--body);font-size:1rem;font-weight:600}
+.role .when{font-family:var(--mono);font-size:.74rem;color:var(--stop)}
+.role p{font-size:.9rem;color:var(--ink-2);margin-top:2px}
+.skills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.skills .sk{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:20px 22px}
+@media (max-width:900px){.skills{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.skills{grid-template-columns:minmax(0,1fr)}}
+.two .sk + .sk{margin-top:22px}
+.sk h3{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--ink-2);margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{font-size:.86rem;padding:5px 12px;border-radius:999px;background:var(--route-soft);color:var(--ink)}
+.members{padding:22px 24px;border:1px solid var(--rule);border-radius:14px;background:var(--panel)}
+.members ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.members li{font-size:.9rem;color:var(--ink-2)}
+.members li b{color:var(--ink);font-weight:600}
+
+/* contact */
+.contact{background:var(--ink);color:var(--paper)}
+.contact .wrap{padding-block:72px}
+.contact .eyebrow{color:var(--route-soft)}
+.contact h2{font-size:clamp(2rem,4.5vw,3.2rem);font-weight:800;font-stretch:110%;margin-top:12px;max-width:20ch}
+.contact p.sub{color:color-mix(in srgb,var(--paper) 72%,var(--ink));max-width:56ch;margin-top:16px}
+.mail{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:30px}
+.mail code{font-family:var(--mono);font-size:clamp(.95rem,2.4vw,1.25rem);padding:10px 16px;border:1px solid color-mix(in srgb,var(--paper) 30%,transparent);border-radius:10px;user-select:all;word-break:break-all}
+.contact .btn{border-color:var(--paper);color:var(--paper)}
+.contact .btn:hover{background:var(--paper);color:var(--ink)}
+.socials{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+footer{font-family:var(--mono);font-size:.74rem;color:var(--ink-2);padding-block:22px}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+@media (max-width:900px){
+  .hero-grid,.about,.two{grid-template-columns:minmax(0,1fr)}
+  .themes,.awards,.areas{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .research-top{grid-template-columns:minmax(0,1fr)}
+  .photo{justify-self:start;max-width:360px}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .hero{padding-block:36px 24px}
+  .themes,.also,.projects,.awards,.areas{grid-template-columns:minmax(0,1fr)}
+  .photo{max-width:300px}
+  .job,.talk{grid-template-columns:minmax(0,1fr);gap:10px}
+  .pub{grid-template-columns:minmax(0,1fr);gap:4px}
+  .stop{padding-block:48px}
+  .portrait{width:72px;height:72px;font-size:1.4rem}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="mark" href="#top"><i></i>C. Okorie</a>
+    <nav aria-label="Sections">
+      <a href="#about">About</a>
+      <a href="#areas">Research</a>
+      <a href="#research">Dissertation</a>
+      <a href="#skills">Skills</a>
+      <a href="#publications">Publications</a>
+      <a href="#experience">Experience</a>
+      <a href="#talks">Talks</a>
+      <a href="#awards">Awards</a>
+      <a href="#leadership">Leadership</a>
+      <a href="#news">News</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Ph.D. Candidate · Industrial Engineering</p>
+      <h1>Chinonso Okorie<span>Operations research for the vehicles that keep cities running</span></h1>
+      <p class="lede">I build mathematical optimization models, custom algorithms and machine learning models for <b>public transportation, shared mobility and micro-mobility, supply chain &amp; logistics, and airline operations</b>, including electric garbage-truck routing and charging infrastructure planning. I have 4+ years of experience across transit, ridesourcing, airline and transportation consulting work. I am a Ph.D. candidate at the <b>FAMU-FSU College of Engineering, Florida A&amp;M University</b>, advised by <a href="https://sites.google.com/view/yanshuosun/home" target="_blank" rel="noopener">Dr. Yanshuo Sun</a>.</p>
+      <div class="cta">
+        <a class="btn primary" href="#publications">Read my research</a>
+        <a class="btn" href="Chinonso_Okorie_CV.pdf" target="_blank" rel="noopener">Download CV</a>
+        <a class="btn" href="https://scholar.google.com/citations?user=yZZ2XAoAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a>
+      </div>
+      <div class="facts">
+        <div class="fact"><b>2</b><span>journal papers, 2026</span></div>
+        <div class="fact"><b>≤2%</b><span>optimality gap at scale</span></div>
+        <div class="fact"><b>96%</b><span>faster computation in live tests</span></div>
+        <div class="fact"><b>4.0</b><span>graduate GPA</span></div>
+      </div>
+    </div>
+    <figure class="photo">
+      <img src="images/profile.jpg" alt="Portrait of Chinonso Okorie" width="640" height="800">
+      <figcaption>
+        <span class="mono">FAMU-FSU College of Engineering</span>
+        <span>Tallahassee, Florida</span>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="wrap">
+    <div class="profiles">
+      <span class="mono">Find me on</span>
+      <a href="https://scholar.google.com/citations?user=yZZ2XAoAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a>
+      <a href="https://www.researchgate.net/profile/Chinonso-Okorie-2" target="_blank" rel="noopener">ResearchGate</a>
+      <a href="https://www.linkedin.com/in/okorie-chinonso/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://github.com/okoriechinonso1" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<main>
+  <section class="stop" id="about">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">About me</p><h2>Smart Routes, Clean Cities, and Better Public Transportation</h2></div>
+      <div class="about">
+        <div class="prose">
+          <p>I design optimization models and algorithms that help cities run their vehicle fleets better. Efficient routes and schedules mean fewer miles driven, lower operating costs and lower emissions. Well-designed service zones mean more reliable public transportation and shared-mobility services for the riders who depend on them.</p>
+          <p>Presently, I am a Ph.D. candidate in <a href="https://eng.famu.fsu.edu/ime" target="_blank" rel="noopener">Industrial Engineering</a> at the <a href="https://eng.famu.fsu.edu/" target="_blank" rel="noopener">FAMU-FSU College of Engineering</a>, Florida A&amp;M University, where I work in the Transportation System Optimization (TSO) Lab advised by <a href="https://sites.google.com/view/yanshuosun/home" target="_blank" rel="noopener">Professor Yanshuo Sun</a>. My dissertation, <em>Optimization Models for Charging Infrastructure Planning and Districting in Solid Waste Collection</em>, uses the City of Tallahassee's waste collection service as a real-world case study. I build mixed-integer and bi-level programs, then design decomposition heuristics and column-generation algorithms that solve them at city scale.</p>
+          <p>Part of my dissertation, a bi-level model for multi-period charging infrastructure planning, is a research collaboration with Professor Zhi-Long Chen of the Robert H. Smith School of Business at the University of Maryland. I also collaborate with the University of Texas at Austin on transit demand estimation for the Florida Department of Transportation, and with the University of North Florida on fare capping research for the Jacksonville Transportation Authority.</p>
+          <p>Beyond research, I teach operations research and data engineering courses as a graduate teaching assistant, and I review papers for the TRB Annual Meeting and the BTR Conference.</p>
+        </div>
+        <div>
+          <p class="eyebrow" style="margin-bottom:18px">Education</p>
+          <div class="edu"><ul>
+            <li><p class="mono when">Expected Aug 2027</p><h3>Ph.D., Industrial Engineering</h3><p>FAMU-FSU College of Engineering, Florida A&amp;M University · GPA 4.0 / 4.0</p></li>
+            <li><p class="mono when">Aug 2022 – Dec 2024</p><h3>M.Sc., Industrial Engineering</h3><p>FAMU-FSU College of Engineering, Florida A&amp;M University · GPA 4.0 / 4.0</p></li>
+            <li><p class="mono when">Nov 2012 – Feb 2018</p><h3>B.Eng., Mechanical Engineering</h3><p>Federal University of Technology, Owerri (FUTO), Nigeria · Industrial &amp; Production option · Second Class Upper</p></li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="areas">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Research focus</p><h2>Core Research Domains</h2></div>
+      <p class="intro">I work in the Transportation System Optimization (TSO) Lab led by <a href="https://sites.google.com/view/yanshuosun/home" target="_blank" rel="noopener">Dr. Yanshuo Sun</a>, which uses integer programming, probabilistic optimization and machine learning to study transportation systems. These are the areas I contribute to, and what I have done in each.</p>
+      <div class="areas">
+        <article class="area"><p class="code">DOMAIN</p><h3>Public Transportation</h3><p>Planning and operating transit and ADA paratransit services.</p><p class="mine"><b>My work:</b> paratransit districting models, FDOT transit demand study, JTA fare capping study.</p></article>
+        <article class="area"><p class="code">DOMAIN</p><h3>Supply Chain &amp; Logistics</h3><p>Routing, scheduling and facility decisions for fleets that move goods and materials.</p><p class="mine"><b>My work:</b> routing and scheduling electric garbage trucks in municipal solid waste collection.</p></article>
+        <article class="area"><p class="code">DOMAIN</p><h3>Transport Networks</h3><p>How the structure of a road or service network shapes the best decisions on it.</p><p class="mine"><b>My work:</b> comparing real road-network and virtual-link models for truck routing; network-based districting formulations.</p></article>
+        <article class="area"><p class="code">DOMAIN</p><h3>Shared Mobility &amp; Micro-mobility</h3><p>Shared-ride, on-demand and micro-mobility services that pool trips or vehicles across many riders.</p><p class="mine"><b>My work:</b> zone design for shared-ride, door-to-door paratransit, cutting trips that cross zone boundaries.</p></article>
+        <article class="area"><p class="code">DOMAIN</p><h3>Environmental Sustainability</h3><p>Lower-emission fleets and the infrastructure they need.</p><p class="mine"><b>My work:</b> electrifying garbage-truck fleets and planning charging stations over multiple years.</p></article>
+        <article class="area"><p class="code">METHOD</p><h3>Operations Research</h3><p>Mixed-integer, bi-level and stochastic programming, with custom algorithms.</p><p class="mine"><b>My work:</b> decomposition heuristics and column generation solving large instances within 2% of optimal.</p></article>
+        <article class="area"><p class="code">METHOD</p><h3>Machine Learning &amp; AI</h3><p>Prediction and classification models that support planning decisions.</p><p class="mine"><b>My work:</b> airline destination recommender (AUC 0.95) and aircraft turn-time regression.</p></article>
+        <article class="area"><p class="code">METHOD</p><h3>Big Data Analytics</h3><p>Large operational and commercial mobility datasets.</p><p class="mine"><b>My work:</b> American Airlines booking and flight data; data-as-a-service mobility data for Florida transit agencies.</p></article>
+      </div>
+      <p class="lab"><span class="mono">Lab</span><a href="https://sites.google.com/view/yanshuosun/team" target="_blank" rel="noopener">TSO Lab team · Ph.D. student since Fall 2022</a><a href="https://sites.google.com/view/yanshuosun/research" target="_blank" rel="noopener">Group projects</a></p>
+    </div>
+  </section>
+
+
+  <section class="stop" id="research">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Dissertation</p><h2>Three Problems, One Municipal Fleet</h2></div>
+      <div class="research-top">
+        <p class="intro">Vehicle-based municipal services such as garbage collection and dial-a-ride paratransit face the same decisions at three levels: where to put infrastructure, how to split the service area, and how to route each vehicle. My dissertation addresses all three. The map shows the idea: trucks leave a depot, serve households in two districts, and recharge at stations along the way.</p>
+        <figure class="map" aria-label="Illustration: electric truck routes from a depot through a service region split into two districts, with charging stations">
+          <canvas id="net"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--route)"></i>truck route</span>
+            <span><i style="background:var(--district)"></i>district boundary</span>
+            <span><i style="background:var(--stop);height:8px;width:8px;border-radius:2px"></i>charging station</span>
+          </div>
+        </figure>
+      </div>
+      <div class="themes">
+        <article class="theme">
+          <p class="line"><i style="background:var(--route)"></i>Operational</p>
+          <h3>Electric-truck routing</h3>
+          <p>Routing and scheduling models for electric garbage trucks that use the real road network, with mid-route charging. Solved with a sequential decomposition heuristic and a column-generation approach.</p>
+          <p class="result">Large instances within <b>2%</b> of optimal, up to <b>90%</b> less solve time than a commercial solver</p>
+        </article>
+        <article class="theme">
+          <p class="line"><i style="background:var(--stop)"></i>Strategic</p>
+          <h3>Charging infrastructure planning</h3>
+          <p>A bi-level mixed-integer model that decides where and when to build charging stations over multiple periods, given how trucks will be routed below. Includes a custom heuristic and an exact algorithm.</p>
+          <p class="result">Case study: <b>City of Tallahassee</b> fleet transition, planned out to <b>2045</b></p>
+        </article>
+        <article class="theme">
+          <p class="line"><i style="background:var(--district)"></i>Tactical</p>
+          <h3>Service districting</h3>
+          <p>Network-based integer programs that split an ADA paratransit region into zones while keeping inter-zone trips low, plus a shortest-path heuristic for large instances. Also a review of districting across municipal services.</p>
+          <p class="result"><b>15%</b> cost savings; balanced zones in <b>under 7 minutes</b> instead of up to 3 hours</p>
+        </article>
+      </div>
+      <div class="also">
+        <article class="theme">
+          <p class="line"><i style="background:var(--ink-2)"></i>Transit data</p>
+          <h3>Demand estimation &amp; fare adoption</h3>
+          <p>Studying how data-as-a-service products can improve transit demand estimates for Florida agencies, and designing an "activation ratio" metric for JTA's mobile ticketing.</p>
+        </article>
+        <article class="theme">
+          <p class="line"><i style="background:var(--ink-2)"></i>Airline analytics</p>
+          <h3>Machine learning on booking data</h3>
+          <p>Multi-class destination recommenders and turn-time regression models built on real American Airlines operational and booking data.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="skills">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Toolkit</p><h2>Skills &amp; Technologies</h2></div>
+      <p class="intro">The optimization solvers, programming languages, data tools and research methods I use in my research and projects.</p>
+      <div class="skills">
+        <div class="sk"><h3>Research Methods</h3><div class="chips"><span>Operations Research</span><span>Mathematical Optimization</span><span>Big Data Analytics</span><span>Statistical Modeling</span><span>Causal Inference</span><span>Predictive Modeling</span></div></div>
+        <div class="sk"><h3>Optimization &amp; Modeling</h3><div class="chips"><span>Gurobi</span><span>CPLEX</span><span>FICO Xpress</span><span>GAMS / GAMSPy</span><span>MIP / MIQP / MINLP</span><span>Bi-level Programming</span><span>Heuristics &amp; Metaheuristics</span><span>Decomposition Methods</span><span>Column Generation</span><span>Large-Scale Optimization</span></div></div>
+        <div class="sk"><h3>Programming Languages</h3><div class="chips"><span>Python</span><span>SQL</span><span>MATLAB</span><span>R</span><span>Java</span></div></div>
+        <div class="sk"><h3>Data &amp; Machine Learning</h3><div class="chips"><span>Pandas</span><span>NumPy</span><span>SciPy</span><span>Scikit-learn</span><span>TensorFlow</span><span>Keras</span><span>PyTorch</span><span>LightGBM</span><span>Matplotlib</span><span>Seaborn</span><span>Plotly / Dash</span><span>Snowflake</span><span>Databricks</span></div></div>
+        <div class="sk"><h3>BI &amp; Productivity</h3><div class="chips"><span>Power BI</span><span>Excel (Power Query / Pivot)</span><span>Git</span><span>Minitab</span><span>SharePoint</span><span>Visio</span><span>WordPress</span><span>Google Sites</span><span>CorelDRAW</span></div></div>
+        <div class="sk"><h3>Certifications</h3><div class="chips"><span>Udacity · AI Programming with Python (2023)</span><span>Web of Science · Introduction to Peer Review (2024)</span><span>Enipro · Data Science &amp; Analytics (2020)</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stop" id="publications">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Publications</p><h2>Journal Papers</h2></div>
+      <div class="pubs">
+        <div class="pub-group">
+          <h3>Journal articles</h3>
+          <div class="pub">
+            <p class="yr">2026</p>
+            <div>
+              <p class="t">Truck route optimization for electrified municipal solid waste collection: Impacts of network representation and new solution algorithms <span class="tag ok">Published</span></p>
+              <p class="a"><u>Okorie, C.</u> and Sun, Y.</p>
+              <p class="v">Transportation Research Part E: Logistics and Transportation Review, 213, 104982</p>
+              <p class="links"><a href="https://scholar.google.com/citations?user=yZZ2XAoAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar →</a></p>
+            </div>
+          </div>
+          <div class="pub">
+            <p class="yr">2026</p>
+            <div>
+              <p class="t">Network-based formulations and solution algorithm for paratransit districting <span class="tag ok">Published</span></p>
+              <p class="a"><u>Okorie, C.</u>, Chen, S., and Sun, Y.</p>
+              <p class="v">Transportation Research Part C: Emerging Technologies, 189, 105738</p>
+              <p class="links"><a href="https://trid.trb.org/View/2701451" target="_blank" rel="noopener">TRID record →</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="pub-group">
+          <h3>Under review</h3>
+          <div class="pub">
+            <p class="yr">2026</p>
+            <div>
+              <p class="t">Bi-level optimization for multi-period charging infrastructure planning in waste collection <span class="tag">Submitted</span></p>
+              <p class="a"><u>Okorie, C.</u>, Chen, Z.-L., and Sun, Y.</p>
+              <p class="v">IISE Transactions</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="experience">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Experience</p><h2>Research &amp; Teaching</h2></div>
+      <div class="timeline">
+        <article class="job">
+          <div class="meta"><p class="when">Jan 2023 – present</p><p>Industrial &amp; Manufacturing Engineering, FAMU-FSU College of Engineering</p></div>
+          <div>
+            <h3>Graduate Research Assistant</h3>
+            <ul>
+              <li>Developed a <b>bi-level MIP model</b>, a custom heuristic and an exact algorithm for multi-period charging infrastructure planning, with Tallahassee CBWM as the case study.</li>
+              <li>Built MIP models and custom solution algorithms for <b>electric-truck route optimization</b> in CBWM collection operations.</li>
+              <li>Formulated two network-based models (17+ constraints) for paratransit districting and a shortest-path heuristic, achieving <b>15% cost savings</b> and <b>96% faster</b> computation in live testing.</li>
+              <li>Built multi-class classifiers (Logistic Regression, LightGBM, one-vs-rest) to recommend destinations from American Airlines booking data, reaching an <b>AUC of 0.95</b>.</li>
+              <li>Collaborated with UT Austin on data-as-a-service for transit demand estimation, and with UNF on a mobile-ticketing "activation ratio" metric for JTA.</li>
+            </ul>
+          </div>
+        </article>
+        <article class="job">
+          <div class="meta"><p class="when">Aug 2023 – present</p><p>Industrial &amp; Manufacturing Engineering, FAMU-FSU College of Engineering</p></div>
+          <div>
+            <h3>Graduate Teaching Assistant</h3>
+            <ul>
+              <li>Supported the undergraduate <b>Operations Research</b> course (Fall 2023, Fall 2024) and <b>Introduction to Data Engineering</b> (Spring 2026).</li>
+              <li>Held weekly office hours, graded assignments and maintained the Canvas gradebook.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+
+      <p class="eyebrow" style="margin:44px 0 18px">Sponsored projects &amp; competitions</p>
+      <div class="projects">
+        <article class="proj"><p class="who">FDOT Public Transit Office · with UT Austin · Jun 2025 – present</p><h3>Enhancing transit demand estimation with emerging data-as-a-service</h3><p>Evaluating how commercial mobility data products can support demand estimation and service planning across Florida transit agencies.</p></article>
+        <article class="proj"><p class="who">Jacksonville Transportation Authority · with UNF · Dec 2024 – Aug 2025</p><h3>JTA Research Lab: fare capping</h3><p>Studied fare affordability, transit accessibility and ridership under fare capping in JTA's mobile ticketing system, including an activation-ratio metric that compares mobile ticketing adoption with the STAR Card.</p></article>
+        <article class="proj"><p class="who">American Airlines Advanced Analytics Challenge · Apr 2024 · Finalist</p><h3>Predicting aircraft turn time before and after COVID-19</h3><p>Regression analysis of delay impacts using operational and flight-level data. Presented at the FAMU-FSU Big Data Symposium.</p></article>
+        <article class="proj"><p class="who">American Airlines Advanced Analytics Challenge · May 2024</p><h3>Destination recommender for airline customers</h3><p>Multi-class classification models trained on real booking data, presented at the FAMU-FSU Big Data Symposium.</p></article>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="talks">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Talks</p><h2>Conferences &amp; Presentations</h2></div>
+      <div class="events">
+        <article class="event">
+          <div class="ev-meta">
+            <p class="ev-when">Oct 4–7, 2026 · Chicago, IL</p>
+            <h3>APTA TRANSform &amp; EXPO</h3>
+            <p>Received the Shirley DeLibero Scholarship from the American Public Transportation Foundation on October 6 at the world's largest public transportation showcase.</p>
+          </div>
+          <div class="ev-photos">
+            <figure style="--ar:.75"><img src="images/events/apta-award.jpg" alt="Chinonso Okorie holding the Shirley DeLibero Scholarship certificate at APTA TRANSform and EXPO" loading="lazy" width="900" height="1200"></figure>
+            <figure style="--ar:.75"><img src="images/events/apta-certificate.jpg" alt="Close-up of Chinonso with the American Public Transportation Foundation scholarship certificate" loading="lazy" width="900" height="1200"></figure>
+            <figure style="--ar:1.914"><img src="images/events/apta-attending.jpg" alt="APTA TRANSform and EXPO 2026 attendee card for Chinonso Okorie, FAMU-FSU College of Engineering" loading="lazy" width="1200" height="627"></figure>
+          </div>
+        </article>
+        <article class="event">
+          <div class="ev-meta">
+            <p class="ev-when">Jan 2026 · Washington, D.C.</p>
+            <h3>TRB 105th Annual Meeting</h3>
+            <p>Poster: <em>Network-based Formulations and Algorithm for the ADA Paratransit Districting Problem</em>, with S. Chen and Y. Sun, including a real-world application to Boston's MBTA RIDE service.</p>
+          </div>
+          <div class="ev-photos">
+            <figure style="--ar:.75"><img src="images/events/trb-poster.jpg" alt="Chinonso Okorie standing beside his TRB poster on ADA paratransit districting" loading="lazy" width="900" height="1200"></figure>
+            <figure style="--ar:.75"><img src="images/events/trb-poster-closeup.jpg" alt="Chinonso Okorie in front of his TRB 2026 poster" loading="lazy" width="901" height="1200"></figure>
+          </div>
+        </article>
+        <article class="event">
+          <div class="ev-meta">
+            <p class="ev-when">Oct 2025 · Atlanta, GA</p>
+            <h3>INFORMS Annual Meeting</h3>
+            <p>Poster: <em>Truck Route Optimization for Electrified Municipal Solid Waste Collection</em>, with Y. Sun, plus a talk on paratransit districting.</p>
+          </div>
+          <div class="ev-photos">
+            <figure style="--ar:1.333"><img src="images/events/informs-poster-discussion.jpg" alt="Chinonso Okorie explaining his electric-truck routing poster to attendees at INFORMS 2025" loading="lazy" width="1200" height="900"></figure>
+            <figure style="--ar:.75"><img src="images/events/informs-meeting.jpg" alt="Chinonso Okorie at the INFORMS Annual Meeting sign" loading="lazy" width="900" height="1200"></figure>
+            <figure style="--ar:1.333"><img src="images/events/informs-poster.jpg" alt="Chinonso Okorie beside his INFORMS 2025 poster" loading="lazy" width="1024" height="768"></figure>
+          </div>
+        </article>
+        <article class="event">
+          <div class="ev-meta">
+            <p class="ev-when">2025 · Atlanta, GA</p>
+            <h3>IISE Doctoral Colloquium</h3>
+            <p>Presented my dissertation plan, <em>Optimization Models for Infrastructure Planning and Districting in Vehicle-Based Municipal Services</em>, as a selected participant.</p>
+          </div>
+          <div class="ev-photos">
+            <figure style="--ar:1.333"><img src="images/events/iise-colloquium.jpg" alt="Chinonso Okorie presenting his dissertation research at the IISE Doctoral Colloquium" loading="lazy" width="1200" height="900"></figure>
+            <figure style="--ar:1.333"><img src="images/events/iise-colloquium-2.jpg" alt="Chinonso Okorie at the podium during the IISE Doctoral Colloquium" loading="lazy" width="1200" height="900"></figure>
+          </div>
+        </article>
+      </div>
+      <p class="eyebrow" style="margin:48px 0 6px">All presentations</p>
+      <div class="talks">
+        <div class="talk"><p class="venue">TRB 2026<small>105th Annual Meeting · Washington, D.C.</small></p><p>Optimization models for the ADA paratransit districting problem<span>with S. Chen and Y. Sun</span></p></div>
+        <div class="talk"><p class="venue">BTR 2026<small>Bridging Transportation Researchers · Online</small></p><p>Network-based formulations and solution algorithm for paratransit districting<span>with Y. Sun</span></p></div>
+        <div class="talk"><p class="venue">INFORMS 2025<small>Annual Meeting · Atlanta, GA</small></p><p>Truck route optimization for electric trucks in solid waste collection<span>with Y. Sun</span></p></div>
+        <div class="talk"><p class="venue">INFORMS 2025<small>Annual Meeting · Atlanta, GA</small></p><p>Network-based formulations and algorithm for the ADA paratransit districting problem<span>with S. Chen and Y. Sun</span></p></div>
+        <div class="talk"><p class="venue">IISE 2025<small>Doctoral Colloquium · Atlanta, GA</small></p><p>Optimization models for charging infrastructure planning and districting in solid waste collection<span>Selected participant</span></p></div>
+        <div class="talk"><p class="venue">BTR 2025<small>Bridging Transportation Researchers · Online</small></p><p>Route optimization for electric trucks in solid waste collection: impacts of network representations and new solution algorithms<span>with Y. Sun</span></p></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="awards">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Honors &amp; awards</p><h2>Scholarships &amp; Fellowships</h2></div>
+      <div class="awards">
+        <div class="award"><p class="amt">$7,500</p><h3>Shirley DeLibero Scholarship</h3><p>American Public Transportation Association (APTA) · 2026–27</p></div>
+        <div class="award"><p class="amt">$5,000</p><h3>FPTA / FTAFC Scholarship</h3><p>Florida Public Transportation Association · 2026–27</p></div>
+        <div class="award"><p class="amt">$5,000</p><h3>Corning Endowed Doctoral Fellowship</h3><p>FAMU-FSU College of Engineering · 2026–27</p></div>
+        <div class="award"><p class="amt">$2,000</p><h3>L3Harris Corporate Scholars Fund Scholarship</h3><p>FAMU-FSU College of Engineering · 2023–24</p></div>
+        <div class="award"><p class="amt">$1,250</p><h3>Dr. Yaw Owusu Memorial Scholarship</h3><p>FAMU-FSU College of Engineering · 2024–25</p></div>
+        <div class="award"><p class="amt">$500</p><h3>John E. Bates Engineering Excellence Scholarship</h3><p>FAMU-FSU College of Engineering</p></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="leadership">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">Leadership &amp; service</p><h2>Community &amp; Leadership</h2></div>
+      <p class="intro">Peer review for the transportation research community, and leadership roles in graduate student organizations at Florida A&amp;M University.</p>
+      <div class="two">
+        <div>
+          <div class="roles">
+            <div class="role"><p class="when">Aug 2025 – present</p><h3>Peer Reviewer, TRB Annual Meeting</h3><p>National Academies of Sciences, Engineering, and Medicine</p></div>
+            <div class="role"><p class="when">Jun 2025 – present</p><h3>Peer Reviewer, Bridging Transportation Researchers (BTR) Conference</h3><p>Reviewing manuscripts for technical soundness and methodological rigor</p></div>
+            <div class="role"><p class="when">Oct 2024 – present</p><h3>Chair, Grievance Committee</h3><p>FAMU Graduate Assistants United · chapter representative to the UFF Contract Enforcement Committee</p></div>
+            <div class="role"><p class="when">Sep 2023 – May 2025</p><h3>Public Relations Officer</h3><p>African Graduate Students Association, Florida A&amp;M University</p></div>
+          </div>
+        </div>
+        <div>
+          <div class="members">
+            <p class="eyebrow">Memberships</p>
+            <ul>
+              <li><b>INFORMS</b> · Student Member, 2024–present</li>
+              <li><b>IISE</b> · Graduate Student Member</li>
+              <li><b>NSBE</b> · APEX Member, 2022–present</li>
+              <li><b>IAENG</b> · Member, 2026–present</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="stop" id="news">
+    <div class="wrap">
+      <div class="stop-head"><span class="dot"></span><p class="eyebrow">News &amp; press</p><h2>In the News</h2></div>
+      <div class="press">
+        <article class="story">
+          <p class="outlet"><span>FAMU-FSU College of Engineering</span><span>Oct 13, 2026</span></p>
+          <h3><a href="https://eng.famu.fsu.edu/news/smart-routes-clean-cities-famu-fsu-engineers-build-route-planning-tools-electric-garbage" target="_blank" rel="noopener">Smart Routes, Clean Cities: FAMU-FSU engineers build route-planning tools for electric garbage trucks</a></h3>
+          <blockquote>“Solid waste collection is a vital municipal service, but it is also a significant source of emissions and air pollution.”</blockquote>
+          <p class="nums"><span><b>≤2%</b> from optimal</span><span><b>90%</b> less solve time</span><span>Plans to <b>2045</b></span></p>
+          <a class="more" href="https://eng.famu.fsu.edu/news/smart-routes-clean-cities-famu-fsu-engineers-build-route-planning-tools-electric-garbage" target="_blank" rel="noopener">Read article →</a>
+        </article>
+        <article class="story">
+          <p class="outlet"><span>FAMU-FSU College of Engineering</span><span>Oct 13, 2026</span></p>
+          <h3><a href="https://eng.famu.fsu.edu/news/engineers-build-optimization-tool-redraw-paratransit-service-zones" target="_blank" rel="noopener">Engineers build optimization tool to redraw paratransit service zones</a></h3>
+          <blockquote>“Up to now, transit agencies have largely relied on intuition or pre-existing boundaries like city limits.”</blockquote>
+          <p class="nums"><span><b>4,300</b> daily rides tested</span><span><b>&lt;7 min</b> vs. up to 3 hours</span></p>
+          <a class="more" href="https://eng.famu.fsu.edu/news/engineers-build-optimization-tool-redraw-paratransit-service-zones" target="_blank" rel="noopener">Read article →</a>
+        </article>
+      </div>
+
+      <figure class="clip">
+        <a href="press/FPTA_Newsletter_Summer_2026_p10.pdf" target="_blank" rel="noopener"><img src="images/fpta-2026.jpg" alt="Newsletter clipping: FPTA/FTAFC 2026 Scholarship Recipient, Congratulations to Chinonso Job Okorie" width="900" height="327" loading="lazy"></a>
+        <figcaption><span class="mono">Florida Transit newsletter · FPTA · Summer 2026, p. 10</span><a href="press/FPTA_Newsletter_Summer_2026_p10.pdf" target="_blank" rel="noopener">Open page (PDF) →</a></figcaption>
+      </figure>
+
+      <p class="eyebrow" style="margin:40px 0 6px">More features</p>
+      <ul class="posts">
+        <li><a href="https://www.linkedin.com/feed/update/urn:li:activity:7493707687780675584/" target="_blank" rel="noopener"><span class="src">APTA</span><span class="ttl">TRANSform Conference &amp; EXPO 2026 · Chicago</span><span class="go">LinkedIn →</span></a></li>
+        <li><a href="https://www.linkedin.com/posts/famu-fsu-college-of-engineering_graduatestudentappreciation-graduatestudent-activity-7446981579161169920-uekt" target="_blank" rel="noopener"><span class="src">FAMU-FSU Engineering</span><span class="ttl">Graduate Student Appreciation Week spotlight</span><span class="go">LinkedIn →</span></a></li>
+        <li><a href="https://www.linkedin.com/posts/famu-fsu-college-of-engineering_engineering-transportationengineering-engineeringresearch-activity-7396249543018979328-v8_v" target="_blank" rel="noopener"><span class="src">FAMU-FSU Engineering</span><span class="ttl">Inside the Transportation System Optimization (TSO) Lab</span><span class="go">LinkedIn →</span></a></li>
+        <li><a href="https://www.linkedin.com/posts/famu-fsu-college-of-engineering_engineering-aviation-engineeringcompetition-activity-7348062014751039488-ytEQ" target="_blank" rel="noopener"><span class="src">FAMU-FSU Engineering</span><span class="ttl">American Airlines Big Data Symposium</span><span class="go">LinkedIn →</span></a></li>
+        <li><a href="https://www.linkedin.com/posts/okorie-chinonso_agsa-agsaabrfamu-famuly-activity-7307573249008091136-qOM5" target="_blank" rel="noopener"><span class="src">AGSA FAMU</span><span class="ttl">African Graduate Students Association member spotlight</span><span class="go">LinkedIn →</span></a></li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<section class="contact" id="contact">
+  <div class="wrap">
+    <p class="eyebrow">Let's connect</p>
+    <h2>Let's Talk Collaborations / Partnerships</h2>
+    <p class="sub">I'm glad to talk about transportation optimization, municipal fleet electrification, transit analytics, or a role on your team.</p>
+    <div class="mail">
+      <code id="email">chinonso1.okorie@famu.edu</code>
+      <button class="btn" id="copy" type="button">Copy email</button>
+    </div>
+    <div class="socials">
+      <a class="btn" href="https://www.linkedin.com/in/okorie-chinonso/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn" href="https://github.com/okoriechinonso1" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn" href="https://scholar.google.com/citations?user=yZZ2XAoAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a>
+      <a class="btn" href="https://www.researchgate.net/profile/Chinonso-Okorie-2" target="_blank" rel="noopener">ResearchGate</a>
+      <a class="btn" href="Chinonso_Okorie_CV.pdf" target="_blank" rel="noopener">CV (PDF)</a>
+    </div>
+  </div>
+</section>
+<footer><div class="wrap"><span>© 2026 Chinonso Okorie</span><span>Tallahassee, Florida</span></div></footer>
+
+<script>
+(function(){
+  // copy email
+  var btn=document.getElementById('copy'),em=document.getElementById('email');
+  btn.addEventListener('click',function(){
+    var t=em.textContent.trim();
+    function sel(){var r=document.createRange();r.selectNodeContents(em);var s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent='Selected, press Ctrl+C';}
+    try{navigator.clipboard.writeText(t).then(function(){btn.textContent='Copied';setTimeout(function(){btn.textContent='Copy email'},1800)},sel)}catch(e){sel()}
+  });
+
+  // hero network: depot, households in two districts, charging stations, animated truck routes
+  var cv=document.getElementById('net'),ctx=cv.getContext('2d');
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var seed=7;function rnd(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646}
+  var N=[],W,H,routes=[],t0=performance.now();
+  function col(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+  function build(){
+    seed=7;N=[];
+    for(var i=0;i<46;i++){N.push({x:.12+rnd()*.78,y:.22+rnd()*.62})}
+    var depot={x:.5,y:.53};
+    // boundary: piecewise line from top to bottom
+    var B=[[.52,.16],[.46,.38],[.57,.6],[.5,.9]];
+    function side(p){ // which side of the boundary polyline
+      for(var k=0;k<B.length-1;k++){if(p.y>=B[k][1]&&p.y<=B[k+1][1]){var f=(p.y-B[k][1])/(B[k+1][1]-B[k][1]);return p.x<B[k][0]+f*(B[k+1][0]-B[k][0])?0:1}}
+      return p.x<.5?0:1}
+    N.forEach(function(p){p.d=side(p)});
+    // three routes per district: nearest-neighbour tours from depot over angular sectors
+    routes=[];
+    [0,1].forEach(function(d){
+      var pts=N.filter(function(p){return p.d===d});
+      pts.forEach(function(p){p.a=Math.atan2(p.y-depot.y,p.x-depot.x)});
+      pts.sort(function(a,b){return a.a-b.a});
+      var k=2,size=Math.ceil(pts.length/k);
+      for(var r=0;r<k;r++){
+        var g=pts.slice(r*size,(r+1)*size);if(!g.length)continue;
+        var tour=[depot],cur=depot,left=g.slice();
+        while(left.length){left.sort(function(a,b){return Math.hypot(a.x-cur.x,a.y-cur.y)-Math.hypot(b.x-cur.x,b.y-cur.y)});cur=left.shift();tour.push(cur)}
+        tour.push(depot);routes.push({pts:tour,d:d,off:rnd()});
+      }
+    });
+    build.depot=depot;build.B=B;
+    build.chargers=[{x:.27,y:.42},{x:.74,y:.72},{x:.7,y:.3}];
+  }
+  function size(){var r=cv.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+  function len(p){var L=0;for(var i=1;i<p.length;i++)L+=Math.hypot((p[i].x-p[i-1].x)*W,(p[i].y-p[i-1].y)*H);return L}
+  function at(p,s){for(var i=1;i<p.length;i++){var l=Math.hypot((p[i].x-p[i-1].x)*W,(p[i].y-p[i-1].y)*H);if(s<=l){var f=s/l;return{x:(p[i-1].x+(p[i].x-p[i-1].x)*f)*W,y:(p[i-1].y+(p[i].y-p[i-1].y)*f)*H}}s-=l}return{x:p[0].x*W,y:p[0].y*H}}
+  function draw(now){
+    var c={route:col('--route'),ink:col('--ink-2'),rule:col('--rule'),stop:col('--stop'),dist:col('--district'),panel:col('--panel'),soft:col('--route-soft')};
+    ctx.clearRect(0,0,W,H);
+    // grid streets
+    ctx.strokeStyle=c.rule;ctx.lineWidth=1;
+    for(var gx=0;gx<=W;gx+=W/12){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke()}
+    for(var gy=0;gy<=H;gy+=H/12){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke()}
+    // boundary
+    ctx.setLineDash([7,6]);ctx.strokeStyle=c.dist;ctx.lineWidth=2.5;ctx.beginPath();
+    build.B.forEach(function(b,i){i?ctx.lineTo(b[0]*W,b[1]*H):ctx.moveTo(b[0]*W,b[1]*H)});ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=c.dist;ctx.font='500 10px "JetBrains Mono",monospace';
+    ctx.fillText('ZONE A',W*.16,H*.2);ctx.fillText('ZONE B',W*.72,H*.2);
+    // routes
+    var T=(now-t0)/1000;
+    routes.forEach(function(r){
+      ctx.strokeStyle=c.route;ctx.globalAlpha=r.d?.55:.85;ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();
+      r.pts.forEach(function(p,i){i?ctx.lineTo(p.x*W,p.y*H):ctx.moveTo(p.x*W,p.y*H)});ctx.stroke();ctx.globalAlpha=1;
+    });
+    // households
+    N.forEach(function(p){ctx.fillStyle=c.panel;ctx.strokeStyle=c.ink;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x*W,p.y*H,3.2,0,7);ctx.fill();ctx.stroke()});
+    // chargers
+    build.chargers.forEach(function(p){ctx.fillStyle=c.stop;ctx.fillRect(p.x*W-6,p.y*H-6,12,12);ctx.fillStyle=c.panel;ctx.font='700 9px Archivo,sans-serif';ctx.fillText('⚡',p.x*W-4.5,p.y*H+3.5)});
+    // depot
+    var d=build.depot;ctx.fillStyle=c.panel;ctx.strokeStyle=c.route;ctx.lineWidth=4;ctx.beginPath();ctx.arc(d.x*W,d.y*H,9,0,7);ctx.fill();ctx.stroke();
+    ctx.fillStyle=c.ink;ctx.font='500 10px "JetBrains Mono",monospace';ctx.fillText('DEPOT',d.x*W+14,d.y*H+4);
+    // trucks
+    routes.forEach(function(r){var L=len(r.pts),s=((T*38+r.off*L)%L);if(reduce)s=r.off*L;var q=at(r.pts,s);
+      ctx.fillStyle=c.route;ctx.beginPath();ctx.arc(q.x,q.y,5.5,0,7);ctx.fill();ctx.strokeStyle=c.panel;ctx.lineWidth=2;ctx.stroke()});
+    if(!reduce)requestAnimationFrame(draw);
+  }
+  build();size();addEventListener('resize',size);
+  requestAnimationFrame(draw);
+})();
+</script>
+
+</body>
+</html>
